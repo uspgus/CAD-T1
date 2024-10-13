@@ -65,10 +65,6 @@ void create_filter(int M, float *filter) {
     }
 }
 
-int image_access(int y, int x, int N, int *image) {
-    return (y < 0 || y >= N || x < 0 || x >= N) ? 0 : image[y*N + x];
-}
-
 int main() {
     int N, M, S, filter_radius;
 
@@ -87,11 +83,14 @@ int main() {
     for (int y = 0; y < N; y++) {
         for (int x = 0; x < N; x++) {
             float acum = 0;  // Inicialize a variável de acumulação
+            
+            int max_i = min(filter_radius, N-1-y);
+            int max_j = min(filter_radius, N-1-x);
 
             #pragma omp simd collapse(2) reduction(+ : acum)
-            for (int i = -filter_radius; i <= filter_radius; i++) {
-                for (int j = -filter_radius; j <= filter_radius; j++) {
-                    acum += image_access(y + i, x + j, N, image) * filter[(i + filter_radius) * M + j + filter_radius];
+            for (int i = -min(filter_radius, y); i <= max_i; i++) {
+                for (int j = -min(filter_radius, x); j <= max_j; j++) {
+                    acum += image[(y+i)*N + x + j] * filter[(i + filter_radius) * M + j + filter_radius];
                 }
             }
 
