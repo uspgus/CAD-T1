@@ -65,6 +65,7 @@ void create_filter(int M, float *filter) {
     }
 }
 
+#pragma omp declare simd
 int image_access(int y, int x, int N, int *image) {
     return (y < 0 || y >= N || x < 0 || x >= N) ? 0 : image[y*N + x];
 }
