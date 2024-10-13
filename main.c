@@ -3,7 +3,6 @@
 // Eduardo Souza Rocha, Gustavo Vieira Ferreira, Isadora Carolina Siebert,
 // Murilo Valentim Zabott, Rogério Lopes Lube 2nd Semester 2024 University of
 // São Paulo, Institute of Mathematical and Computer Science
-
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,27 +86,21 @@ int main() {
     #pragma omp parallel for collapse(2) reduction(max : maior) reduction(min : menor)
     for (int y = 0; y < N; y++) {
         for (int x = 0; x < N; x++) {
-            float pixel = 0;
-            #pragma omp simd collapse(2) reduction(+ : pixel)
+            float acum = 0;  // Inicialize a variável de acumulação
+
+            #pragma omp simd collapse(2) reduction(+ : acum)
             for (int i = -filter_radius; i <= filter_radius; i++) {
                 for (int j = -filter_radius; j <= filter_radius; j++) {
                     acum += image_access(y + i, x + j, N, image) * filter[i + filter_radius][j + filter_radius];
                 }
             }
+
+            output_image[y][x] = clamp((int)acum, 0, 255);  // Aplique o clamp antes de atualizar o menor e maior
             menor = min(menor, output_image[y][x]);
             maior = max(maior, output_image[y][x]);
-            output_image[y][x] = clamp(acum, 0, 255);
         }
     }
 
-    printf("\n");
-    print_image(N, image);
-    printf("\n");
-    print_filter(M, filter);
-    printf("\n");
-    print_image(N, output_image);
-    printf("maior: %d\n", maior);
-    printf("menor: %d\n", menor);
-
+    printf("%d %d", maior, menor); // arquivos .out nao tem /n no fim (runcodes faz um trim ent n teria problema, mas o diff do linux (usando pra testar) da BO)
     return 0;
 }
