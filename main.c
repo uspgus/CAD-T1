@@ -31,42 +31,38 @@ void input_and_validation(int *N, int *M, int *S, int *filter_radius) {
     srand(*S);
 }
 
-void print_image(int N, int image[N][N]) {
+void print_image(int N, int *image) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            printf("%3d ", image[i][j]);
+            printf("%3d ", image[i*N + j]);
         }
         printf("\n");
     }
 }
 
-void print_filter(int M, float filter[M][M]) {
+void print_filter(int M, float *filter) {
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < M; j++) {
-            printf("%1.1f ", filter[i][j]);
+            printf("%1.1f ", filter[i*M + j]);
         }
         printf("\n");
     }
 }
 
-void create_image(int N, int image[N][N]) {
+void create_image(int N, int *image) {
     for (int y = 0; y < N; y++) {
         for (int x = 0; x < N; x++) {
-            image[y][x] = rand() % 256;
+            image[y*N + x] = rand() % 256;
         }
     }
 }
 
-void create_filter(int M, float filter[M][M]) {
+void create_filter(int M, float *filter) {
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < M; j++) {
-            filter[i][j] = (rand() % 10) / 10.0;
+            filter[i*M + j] = (rand() % 10) / 10.0;
         }
     }
-}
-
-int image_access(int y, int x, int N, int image[N][N]) {
-    return (y < 0 || y >= N || x < 0 || x >= N) ? 0 : image[y][x];
 }
 
 int main() {
@@ -74,9 +70,9 @@ int main() {
 
     input_and_validation(&N, &M, &S, &filter_radius);
 
-    int image[N][N];
-    float filter[M][M];
-    int output_image[N][N];
+    int *image = (int *) malloc(N * N * sizeof(int));
+    float *filter = (float *) malloc(M * M * sizeof(float));
+    int *output_image = (int *) malloc(N * N * sizeof(int));
 
     create_image(N, image);
     create_filter(M, filter);
@@ -87,20 +83,28 @@ int main() {
     for (int y = 0; y < N; y++) {
         for (int x = 0; x < N; x++) {
             float acum = 0;  // Inicialize a variável de acumulação
+            
+            int max_i = min(filter_radius, N-1-y);
+            int max_j = min(filter_radius, N-1-x);
 
             #pragma omp simd collapse(2) reduction(+ : acum)
-            for (int i = -filter_radius; i <= filter_radius; i++) {
-                for (int j = -filter_radius; j <= filter_radius; j++) {
-                    acum += image_access(y + i, x + j, N, image) * filter[i + filter_radius][j + filter_radius];
+            for (int i = -min(filter_radius, y); i <= max_i; i++) {
+                for (int j = -min(filter_radius, x); j <= max_j; j++) {
+                    acum += image[(y+i)*N + x + j] * filter[(i + filter_radius) * M + j + filter_radius];
                 }
             }
 
-            output_image[y][x] = clamp((int)acum, 0, 255);  // Aplique o clamp antes de atualizar o menor e maior
-            menor = min(menor, output_image[y][x]);
-            maior = max(maior, output_image[y][x]);
+            output_image[y*N + x] = clamp((int)acum, 0, 255);  // Aplique o clamp antes de atualizar o menor e maior
+            menor = min(menor, output_image[y*N + x]);
+            maior = max(maior, output_image[y*N + x]);
         }
     }
 
-    printf("%d %d", maior, menor); // arquivos .out nao tem /n no fim (runcodes faz um trim ent n teria problema, mas o diff do linux (usando pra testar) da BO)
+    printf("%d %d", maior, menor);
+
+    free(image);
+    free(filter);
+    free(output_image);
+
     return 0;
 }
